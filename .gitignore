@@ -1,0 +1,14 @@
+# Compiled object files
+*.o
+
+# Kernel build output
+*.elf
+*.bin
+*.iso
+
+# Temporary files
+*.log
+*.tmp
+
+# Editor files
+.vscode/
