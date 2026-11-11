@@ -12,6 +12,9 @@ unsigned int scheduler_get_quantum(void);
 
 void scheduler_age(void);
 
+unsigned int scheduler_get_context_switches(void);
+void scheduler_reset_context_switches(void);
+
 /* Called from interrupt_stubs.S */
 unsigned int scheduler_interrupt(
     unsigned int saved_esp,

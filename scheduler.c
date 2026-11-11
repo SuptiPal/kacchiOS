@@ -10,6 +10,7 @@ static unsigned int quantum = 3;
 static unsigned int elapsed = 0;
 
 static unsigned int idle_saved = 0;
+static volatile unsigned int context_switches = 0;
 
 void scheduler_init(void)
 {
@@ -28,8 +29,7 @@ void scheduler_set_quantum(unsigned int ticks)
     unsigned int flags;
     __asm__ volatile(
         "pushfl; popl %0; cli"
-        : "=r"(flags) : : "memory"
-    );
+        : "=r"(flags) : : "memory");
 
     quantum = ticks;
 
@@ -44,7 +44,8 @@ unsigned int scheduler_get_quantum(void)
 
 void scheduler_age(void)
 {
-    for (int i = 0; i < MAX_PROCESSES; i++) {
+    for (int i = 0; i < MAX_PROCESSES; i++)
+    {
         pcb *p = &processes[i];
 
         if (!p->active || p->state != READY)
@@ -52,7 +53,8 @@ void scheduler_age(void)
 
         p->waiting_time++;
 
-        if (p->waiting_time >= AGING_INTERVAL) {
+        if (p->waiting_time >= AGING_INTERVAL)
+        {
             if (p->priority < MAX_PRIORITY)
                 p->priority++;
 
@@ -70,14 +72,16 @@ int scheduler_next(void)
      * Starting after current_pid gives round-robin
      * selection among equal-priority tasks.
      */
-    for (int i = 1; i <= MAX_PROCESSES; i++) {
+    for (int i = 1; i <= MAX_PROCESSES; i++)
+    {
         int pid = (current_pid + i) % MAX_PROCESSES;
         pcb *p = &processes[pid];
 
         if (!p->active || p->state != READY)
             continue;
 
-        if (p->priority > best_priority) {
+        if (p->priority > best_priority)
+        {
             best_priority = p->priority;
             best = pid;
         }
@@ -88,12 +92,12 @@ int scheduler_next(void)
 
 unsigned int scheduler_interrupt(
     unsigned int saved_esp,
-    unsigned int is_timer
-)
+    unsigned int is_timer)
 {
     int old = current_pid;
 
-    if (is_timer) {
+    if (is_timer)
+    {
         timer_increment();
 
         /*
@@ -109,10 +113,13 @@ unsigned int scheduler_interrupt(
      * First software interrupt saves the
      * kernel/idle execution context.
      */
-    if (old < 0) {
+    if (old < 0)
+    {
         idle_esp = saved_esp;
         idle_saved = 1;
-    } else {
+    }
+    else
+    {
         processes[old].esp = saved_esp;
 
         if (is_timer)
@@ -125,7 +132,8 @@ unsigned int scheduler_interrupt(
      * task is ready.
      */
     if (is_timer && old >= 0 &&
-        processes[old].state == CURRENT) {
+        processes[old].state == CURRENT)
+    {
 
         elapsed++;
 
@@ -134,13 +142,15 @@ unsigned int scheduler_interrupt(
         if (elapsed < quantum &&
             (best < 0 ||
              processes[best].priority <=
-             processes[old].priority)) {
+                 processes[old].priority))
+        {
             return saved_esp;
         }
     }
 
     if (old >= 0 &&
-        processes[old].state == CURRENT) {
+        processes[old].state == CURRENT)
+    {
         processes[old].state = READY;
 
         /* Remove temporary aging boost after use. */
@@ -151,7 +161,11 @@ unsigned int scheduler_interrupt(
 
     int next = scheduler_next();
 
-    if (next >= 0) {
+    if (next >= 0)
+    {
+        if (next != old)
+            context_switches++;
+
         current_pid = next;
         processes[next].state = CURRENT;
         processes[next].waiting_time = 0;
@@ -165,7 +179,8 @@ unsigned int scheduler_interrupt(
      * resume it.
      */
     if (old >= 0 &&
-        processes[old].state == READY) {
+        processes[old].state == READY)
+    {
         current_pid = old;
         processes[old].state = CURRENT;
         elapsed = 0;
@@ -176,6 +191,9 @@ unsigned int scheduler_interrupt(
     /*
      * No runnable processes: resume idle context.
      */
+    if (old >= 0)
+        context_switches++;
+
     current_pid = -1;
     elapsed = 0;
 
@@ -197,4 +215,35 @@ void scheduler_start(void)
      * context and starts the first READY task.
      */
     __asm__ volatile("sti; int $0x30" ::: "memory");
+}
+
+unsigned int scheduler_get_context_switches(void)
+{
+    unsigned int flags;
+    unsigned int result;
+
+    __asm__ volatile(
+        "pushfl; popl %0; cli"
+        : "=r"(flags) : : "memory");
+
+    result = context_switches;
+
+    if (flags & 0x200)
+        __asm__ volatile("sti" ::: "memory");
+
+    return result;
+}
+
+void scheduler_reset_context_switches(void)
+{
+    unsigned int flags;
+
+    __asm__ volatile(
+        "pushfl; popl %0; cli"
+        : "=r"(flags) : : "memory");
+
+    context_switches = 0;
+
+    if (flags & 0x200)
+        __asm__ volatile("sti" ::: "memory");
 }
