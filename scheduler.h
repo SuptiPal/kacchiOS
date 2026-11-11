@@ -7,10 +7,15 @@ int scheduler_next(void);
 void scheduler_yield(void);
 void scheduler_start(void);
 
-void scheduler_set_quantum(unsigned int quantum);
+void scheduler_set_quantum(unsigned int ticks);
 unsigned int scheduler_get_quantum(void);
 
-void scheduler_tick(void);
 void scheduler_age(void);
+
+/* Called from interrupt_stubs.S */
+unsigned int scheduler_interrupt(
+    unsigned int saved_esp,
+    unsigned int is_timer
+);
 
 #endif
