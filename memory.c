@@ -22,24 +22,41 @@ void *kmalloc(unsigned int size)
     unsigned int needed =
         (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    for (unsigned int i = 0; i + needed <= TOTAL_BLOCKS; i++) {
+    int best_start = -1;
+    unsigned int best_size = TOTAL_BLOCKS + 1;
 
-        unsigned int j = 0;
+    unsigned int i = 0;
 
-        while (j < needed && !used[i + j])
-            j++;
+    while (i < TOTAL_BLOCKS) {
+        if (used[i]) {
+            i++;
+            continue;
+        }
 
-        if (j == needed) {
-            for (j = 0; j < needed; j++)
-                used[i + j] = 1;
+        unsigned int start = i;
 
-            allocation[i] = needed;
+        while (i < TOTAL_BLOCKS && !used[i])
+            i++;
 
-            return &pool[i * BLOCK_SIZE];
+        unsigned int length = i - start;
+
+        if (length >= needed && length < best_size) {
+            best_start = (int)start;
+            best_size = length;
         }
     }
 
-    return 0;
+    if (best_start < 0)
+        return 0;
+
+    unsigned int start = (unsigned int)best_start;
+
+    for (unsigned int j = 0; j < needed; j++)
+        used[start + j] = 1;
+
+    allocation[start] = needed;
+
+    return &pool[start * BLOCK_SIZE];
 }
 
 void kfree(void *ptr)

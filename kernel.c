@@ -72,35 +72,41 @@ static void test_memory(void)
         serial_puts("[FAIL] Heap deallocation\n");
 
     void *a = kmalloc(256);
-    void *b = kmalloc(512);
-    void *c = kmalloc(256);
+    void *large = kmalloc(1024);
+    void *separator = kmalloc(256);
+    void *small = kmalloc(512);
+    void *end = kmalloc(256);
 
-    if (!a || !b || !c) {
-        serial_puts("[FAIL] Memory test setup\n");
+    if (!a || !large || !separator || !small || !end) {
+        serial_puts("[FAIL] Best-fit test setup\n");
 
         kfree(a);
-        kfree(b);
-        kfree(c);
+        kfree(large);
+        kfree(separator);
+        kfree(small);
+        kfree(end);
         return;
     }
 
-    kfree(b);
+    kfree(large);
+    kfree(small);
 
-    void *reused = kmalloc(512);
+    void *result = kmalloc(512);
 
-    if (reused == b)
-        serial_puts("[PASS] First-fit memory reuse\n");
+    if (result == small)
+        serial_puts("[PASS] Best-fit allocation\n");
     else
-        serial_puts("[FAIL] First-fit memory reuse\n");
+        serial_puts("[FAIL] Best-fit allocation\n");
 
-    kfree(reused);
+    kfree(result);
     kfree(a);
-    kfree(c);
+    kfree(separator);
+    kfree(end);
 
     if (memory_free_blocks() == before)
-        serial_puts("[PASS] Memory cleanup\n");
+        serial_puts("[PASS] Memory reuse and cleanup\n");
     else
-        serial_puts("[FAIL] Memory cleanup\n");
+        serial_puts("[FAIL] Memory reuse and cleanup\n");
 }
 
 /* Process management tests */
