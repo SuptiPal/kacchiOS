@@ -18,12 +18,10 @@ typedef enum {
 typedef struct {
     int pid;
     process_state state;
-
     void (*entry)(void);
 
     void *stack;
     unsigned int esp;
-
     int active;
 
     int priority;
@@ -37,7 +35,6 @@ extern pcb processes[MAX_PROCESSES];
 extern int current_pid;
 
 void process_init(void);
-
 int process_create(void (*entry)(void));
 int process_terminate(int pid);
 void process_exit(void);
@@ -46,7 +43,6 @@ pcb *process_get(int pid);
 
 int process_set_priority(int pid, int priority);
 int process_get_priority(int pid);
-
 int process_block(int pid);
 int process_unblock(int pid);
 

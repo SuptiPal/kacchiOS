@@ -35,10 +35,14 @@ int ipc_send(int qid, int message)
 
     MessageQueue *q = &queues[qid];
 
-    if (!q->active || q->count == QUEUE_SIZE)
+    if (!q->active)
+        return -1;
+
+    if (q->count == QUEUE_SIZE)
         return -1;
 
     q->data[q->rear] = message;
+
     q->rear = (q->rear + 1) % QUEUE_SIZE;
     q->count++;
 
@@ -47,15 +51,22 @@ int ipc_send(int qid, int message)
 
 int ipc_receive(int qid, int *message)
 {
-    if (qid < 0 || qid >= MAX_QUEUES || !message)
+    if (qid < 0 || qid >= MAX_QUEUES)
+        return -1;
+
+    if (message == 0)
         return -1;
 
     MessageQueue *q = &queues[qid];
 
-    if (!q->active || q->count == 0)
+    if (!q->active)
+        return -1;
+
+    if (q->count == 0)
         return -1;
 
     *message = q->data[q->front];
+
     q->front = (q->front + 1) % QUEUE_SIZE;
     q->count--;
 
@@ -71,9 +82,9 @@ int ipc_destroy(int qid)
         return -1;
 
     queues[qid].active = 0;
+    queues[qid].count = 0;
     queues[qid].front = 0;
     queues[qid].rear = 0;
-    queues[qid].count = 0;
 
     return 0;
 }
